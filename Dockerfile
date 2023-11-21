@@ -14,6 +14,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 
+ENV PORT=8080
+
 WORKDIR /app
 
 # Create a non-privileged user that the app will run under.
@@ -48,5 +50,4 @@ COPY . .
 EXPOSE 8080
 
 # Run the application.
-#CMD gunicorn 'app:server' --bind=0.0.0.0:8080
-CMD python app.py
+CMD gunicorn 'app:server' --bind :$PORT
