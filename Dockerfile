@@ -45,7 +45,7 @@ USER appuser
 COPY . .
 
 # Expose the port that the application listens on.
-EXPOSE 8050
+EXPOSE 8080
 
 # Run the application.
-CMD gunicorn 'app:server' --bind=0.0.0.0:8050
+CMD gunicorn 'app:server' --bind=0.0.0.0:8080
