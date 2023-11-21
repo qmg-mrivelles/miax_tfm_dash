@@ -48,4 +48,5 @@ COPY . .
 EXPOSE 8080
 
 # Run the application.
-CMD gunicorn 'app:server' --bind=0.0.0.0:8080
+#CMD gunicorn 'app:server' --bind=0.0.0.0:8080
+CMD python app.py
