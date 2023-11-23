@@ -14,7 +14,8 @@ server = app.server
 def create_engine_mysql():
     user = 'root'
     password = 'comtrend'
-    host = '35.202.233.213'
+    #host = '35.202.233.213'
+    host = '10.0.0.3'
     database = 'miax-data'
     return create_engine(f'mysql+pymysql://{user}:{password}@{host}/{database}')
 
