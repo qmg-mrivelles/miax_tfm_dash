@@ -8,15 +8,6 @@ from dash.dependencies import Input, Output
 app = Dash(__name__, external_stylesheets=['https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css'])
 server = app.server
 
-# Database connection configuration
-config = {
-    'user': 'root',
-    'password': 'comtrend',
-    'host': '35.202.233.213',
-    'database': 'miax-data',
-    'raise_on_warnings': True
-}
-
 # Connect to the database
 #cnx = mysql.connector.connect(**config)
 
