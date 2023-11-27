@@ -1,73 +1,64 @@
 import os
-#import mysql.connector
-import pandas as pd
-from sqlalchemy import create_engine
-from dash import Dash, dash_table, dcc, html
-from dash.dependencies import Input, Output
+import re
+from dash import Dash, dcc, html
+from dash.dependencies import Input, Output, State
+from views import layout_model_selection, layout_model_metrics, layout_main
+from lib import get_model_id
 
 app = Dash(__name__, external_stylesheets=['https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css'])
 server = app.server
-
-# Connect to the database
-#cnx = mysql.connector.connect(**config)
-
-def create_engine_mysql():
-    user = 'root'
-    password = 'comtrend'
-    host = '35.202.233.213'
-    #host = '10.0.0.3'
-    database = 'miax-data'
-    return create_engine(f'mysql+pymysql://{user}:{password}@{host}/{database}')
-
-# Function to fetch data from the database
-def fetch_data(query):
-    """Fetch data from MySQL database."""
-    #cnx = mysql.connector.connect(**config)
-    #df = pd.read_sql(query, cnx)
-    #cnx.close()
-    #return df
-    engine = create_engine_mysql()
-    with engine.connect() as connection:
-        return pd.read_sql(query, connection)
-
-def layout_main():
-    return html.Div([
-        html.H1("Main Page"),
-        html.Div("Hello World"),
-        dcc.Link('Go to Data Table', href='/data-table')
-    ])
-
-
-def layout_data_table():
-    # Fetch data from database
-    data = fetch_data("SELECT * FROM people")
-
-    # Create a Dash DataTable
-    table = dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in data.columns],
-        data=data.to_dict('records'),
-    )
-
-    return html.Div([
-        html.H1("Data Table"),
-        table,
-        dcc.Link('Go to Main Page', href='/')
-    ])
-
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(id='page-content')
 ])
 
+app.clientside_callback(
+    """
+    function(active_cell, data) {
+        if(active_cell) {
+            var row = data[active_cell.row];
+            // Assuming you have a column that contains the URL or identifier
+            var url = '/' + row.url;
+            window.location.href = url;
+        }
+    }
+    """,
+    Output('hidden-div', 'children'),  # This output is not used, but necessary for the callback
+    [Input('table', 'active_cell')],
+    [State('table', 'data')]
+)
+
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
-    if pathname == '/data-table':
-        return layout_data_table()
+    model_id = get_model_id(pathname)
+
+    model_metrics_by_id = r'/model/(?P<id>[\w_]+)/metrics'
+    model_features_by_id = r'/model/(?P<id>[\w_]+)/features'
+    model_backtest_by_id = r'/model/(?P<id>[\w_]+)/backtest'
+    model_charts_by_id = r'/model/(?P<id>[\w_]+)/charts'
+
+    # Start asking by the most children to least, HTML Router
+    if re.match(model_metrics_by_id, pathname):
+        return layout_model_metrics(model_id)
+    elif re.match(model_features_by_id, pathname):
+        return layout_model_metrics(model_id)
+    elif re.match(model_backtest_by_id, pathname):
+        return layout_model_metrics(model_id)
+    elif re.match(model_charts_by_id, pathname):
+        return layout_model_metrics(model_id)
+    elif pathname == '/models':
+        return layout_model_selection()
+    elif pathname == '/' or pathname == '':
+       return layout_main()
     else:
-        return layout_main()
+        return '404'
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)), debug=True)
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get("PORT", 8080)),
+        debug=False,
+        dev_tools_ui=False,
+        dev_tools_props_check=False)
