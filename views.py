@@ -20,7 +20,9 @@ def layout_model_selection():
         id='table',
         columns=[{"name": i, "id": i} for i in data.columns],
         data=data.to_dict('records'),
-        row_selectable='single',
+        hidden_columns=['url'],
+        sort_action='native',
+        cell_selectable=True
     )
 
     return html.Div([
@@ -39,8 +41,7 @@ def layout_model_metrics(model_id):
     table = dash_table.DataTable(
         id='table',
         columns=[{"name": i, "id": i} for i in data.columns],
-        data=data.to_dict('records'),
-        row_selectable='single'
+        data=data.to_dict('records')
     )
 
     return html.Div([
