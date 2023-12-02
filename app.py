@@ -2,8 +2,15 @@ import os
 import re
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output, State
-from views import layout_model_selection, layout_model_metrics, layout_main
+from views import layout_model_selection, layout_model_metrics, layout_insert
 from lib import get_model_id
+import os
+
+# Replace with the path to your service account key file
+service_account_key_path = './special_key.json'
+
+# Set the environment variable
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_key_path
 
 app = Dash(__name__, external_stylesheets=['https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css'])
 server = app.server
@@ -33,25 +40,15 @@ app.clientside_callback(
               [Input('url', 'pathname')])
 def display_page(pathname):
     model_id = get_model_id(pathname)
-
     model_metrics_by_id = r'/model/(?P<id>[\w_]+)/metrics'
-    model_features_by_id = r'/model/(?P<id>[\w_]+)/features'
-    model_backtest_by_id = r'/model/(?P<id>[\w_]+)/backtest'
-    model_charts_by_id = r'/model/(?P<id>[\w_]+)/charts'
 
     # Start asking by the most children to least, HTML Router
     if re.match(model_metrics_by_id, pathname):
         return layout_model_metrics(model_id)
-    elif re.match(model_features_by_id, pathname):
-        return layout_model_metrics(model_id)
-    elif re.match(model_backtest_by_id, pathname):
-        return layout_model_metrics(model_id)
-    elif re.match(model_charts_by_id, pathname):
-        return layout_model_metrics(model_id)
-    elif pathname == '/models':
-        return layout_model_selection()
+    #elif pathname == '/insert':
+    #    return layout_insert();
     elif pathname == '/' or pathname == '':
-       return layout_main()
+       return layout_model_selection()
     else:
         return '404'
 

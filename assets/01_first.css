@@ -1,3 +1,7 @@
 .dash-spreadsheet-menu-item button.show-hide {
     display: none;
 }
+
+.dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner td {
+    padding: 0 10px !important;
+}
