@@ -4,13 +4,6 @@ from sklearn.manifold import TSNE
 import pandas as pd
 import plotly.express as px
 
-def layout_main():
-    return html.Div([
-        html.H1("Main Page"),
-        html.Div("Hello World"),
-        dcc.Link('Go to Data Models', href='/models')
-    ])
-
 def layout_model_selection():
     query = ("SELECT id, model_id, model_type, annual_return_os_pct, sharpe_os, calmar_os, max_dd_os_pct, end_os, trades_os, n_neurons, num_train_params, horizon, alpha, beta, period FROM metrics")
     # Fetch data from database
@@ -52,7 +45,7 @@ def layout_model_selection():
     fig.update_layout(showlegend=False)
 
     return html.Div([
-        html.H1("Models"),
+        html.H1("Modelos"),
         table,
         html.Div(id='hidden-div', style={'display':'none'}),
         dcc.Graph(figure=fig)

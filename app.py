@@ -2,13 +2,13 @@ import os
 import re
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output, State
-from views import layout_model_selection, layout_model_metrics, layout_insert
+from views import layout_model_selection, layout_model_metrics
 from lib import get_model_id
-import os
+from dotenv import load_dotenv
 
-# Replace with the path to your service account key file
+load_dotenv()  # This loads the variables from .env
+
 service_account_key_path = './special_key.json'
-
 # Set the environment variable
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_key_path
 
@@ -17,6 +17,10 @@ server = app.server
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
+    html.Div(
+        html.Img(src='/assets/logo.jpeg', style={'width': '400px'}),
+        style={'text-align': 'center'}
+    ),
     html.Div(id='page-content')
 ])
 
@@ -45,8 +49,6 @@ def display_page(pathname):
     # Start asking by the most children to least, HTML Router
     if re.match(model_metrics_by_id, pathname):
         return layout_model_metrics(model_id)
-    #elif pathname == '/insert':
-    #    return layout_insert();
     elif pathname == '/' or pathname == '':
        return layout_model_selection()
     else:

@@ -1,3 +1,4 @@
+import os
 import re
 import pandas as pd
 from sqlalchemy import create_engine
@@ -6,10 +7,10 @@ from io import StringIO, BytesIO
 
 # Connect to the database
 def create_engine_mysql():
-    user = 'root'
-    password = 'comtrend'
-    host = '35.202.233.213'
-    database = 'miax-data'
+    user = os.getenv('DB_USER')
+    password = os.getenv('DB_PASSWORD')
+    host = os.getenv('DB_HOST')
+    database = os.getenv('DB_NAME')
     return create_engine(f'mysql+pymysql://{user}:{password}@{host}/{database}')
 
 # Function to fetch data from the database
