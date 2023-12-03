@@ -65,3 +65,10 @@ def get_model_id(pathname):
         model_id = match_model_id.groups()[0]
 
     return model_id
+
+# Function to read equity curve csv
+def read_equity_curve(model_id):
+    bucket_name = 'miax-data'
+    source_blob_name = f'equity_curves/{model_id}.csv'
+    df = read_data_bucket(bucket_name, source_blob_name)
+    return df

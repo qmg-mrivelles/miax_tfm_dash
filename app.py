@@ -1,6 +1,7 @@
 import os
 import re
 from dash import Dash, dcc, html
+import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from views import layout_model_selection, layout_model_metrics
 from lib import get_model_id
@@ -12,7 +13,8 @@ service_account_key_path = './special_key.json'
 # Set the environment variable
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_key_path
 
-app = Dash(__name__, external_stylesheets=['https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css'])
+external_stylesheets = [dbc.themes.BOOTSTRAP]
+app = Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
 
 app.layout = html.Div([
@@ -22,7 +24,7 @@ app.layout = html.Div([
         style={'text-align': 'center'}
     ),
     html.Div(id='page-content')
-])
+], className='container')
 
 app.clientside_callback(
     """
