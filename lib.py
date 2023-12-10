@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from google.cloud import storage
 from io import StringIO, BytesIO
 
+
 # Connect to the database
 def create_engine_mysql():
     user = os.getenv('DB_USER')
@@ -13,6 +14,7 @@ def create_engine_mysql():
     database = os.getenv('DB_NAME')
     return create_engine(f'mysql+pymysql://{user}:{password}@{host}/{database}')
 
+
 # Function to fetch data from the database
 def fetch_data_db(query):
     """Fetch data from MySQL database."""
@@ -20,12 +22,14 @@ def fetch_data_db(query):
     with engine.connect() as connection:
         return pd.read_sql(query, connection)
 
+
 # Function to insert data to the database
 def save_data_db(df, table_name):
     """Insert data to MySQL database."""
     engine = create_engine_mysql()
     with engine.connect() as connection:
         return df.to_sql(name=table_name, con=engine, index=False, if_exists='append')
+
 
 # Function to insert data to the bucket
 def save_data_bucket(df, bucket_name, destination_blob_name):
@@ -39,6 +43,7 @@ def save_data_bucket(df, bucket_name, destination_blob_name):
     # Create a new blob and upload the file's content.
     blob = bucket.blob(destination_blob_name)
     blob.upload_from_string(csv_buffer.getvalue(), content_type='text/csv')
+
 
 # Function to read data to the bucket
 def read_data_bucket(bucket_name, source_blob_name):
@@ -56,6 +61,7 @@ def read_data_bucket(bucket_name, source_blob_name):
     df = pd.read_csv(byte_stream)
     return df
 
+
 # Function to get model id from url, like params
 def get_model_id(pathname):
     model_id_pattern = r'/model/(?P<id>[\w_]+)/'
@@ -65,6 +71,7 @@ def get_model_id(pathname):
         model_id = match_model_id.groups()[0]
 
     return model_id
+
 
 # Function to read equity curve csv
 def read_equity_curve(model_id):

@@ -42,6 +42,7 @@ app.clientside_callback(
     [State('table', 'data')]
 )
 
+
 @app.callback(Output('page-content', 'children'),
               [Input('url', 'pathname')])
 def display_page(pathname):
@@ -52,9 +53,10 @@ def display_page(pathname):
     if re.match(model_metrics_by_id, pathname):
         return layout_model_metrics(model_id)
     elif pathname == '/' or pathname == '':
-       return layout_model_selection()
+        return layout_model_selection()
     else:
         return '404'
+
 
 if __name__ == '__main__':
     app.run(
