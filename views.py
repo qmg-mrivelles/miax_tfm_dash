@@ -1,4 +1,4 @@
-from lib import fetch_data_db, save_data_db, read_equity_curve
+from lib import fetch_data_db, read_equity_curve
 from dash import dash_table, dcc, html
 from sklearn.manifold import TSNE
 import dash_bootstrap_components as dbc
@@ -23,7 +23,8 @@ def layout_model_selection():
         data=data.to_dict('records'),
         hidden_columns=hidden_cols,
         sort_action='native',
-        cell_selectable=True
+        cell_selectable=True,
+        page_size=20
     )
 
     df = data[[
@@ -53,19 +54,6 @@ def layout_model_selection():
         table,
         html.Div(id='hidden-div', style={'display': 'none'}),
         dcc.Graph(figure=fig)
-    ])
-
-
-def layout_insert():
-    data_insert = [{
-        'model_id': 'PUM', 'model_type': 'RandomForest', 'end_os': '2023-08-24 9:50:00',
-        'annual_return_os_pct': 27.8, 'sharpe_os': 1.5, 'calmar_os': 2.3, 'max_dd_os_pct': 30.9, 'trades_os': 3000
-    }]
-    df = pd.DataFrame(data_insert)
-    id = save_data_db(df, 'metrics')
-
-    return html.Div([
-        html.H1(f'Ok{id}'),
     ])
 
 
