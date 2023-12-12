@@ -1,6 +1,9 @@
 from lib import fetch_data_db, read_equity_curve
 from dash import dash_table, dcc, html
 from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
@@ -8,13 +11,14 @@ import plotly.express as px
 
 def layout_model_selection():
     query = (
-        "SELECT id, model_id, model_type, annual_return_os_pct, sharpe_os, calmar_os, max_dd_os_pct, end_os, trades_os, n_neurons, num_train_params, horizon, alpha, beta, period FROM metrics")
+        "SELECT id, model_id, model_type, annual_return_os_pct, sharpe_os, calmar_os, max_dd_os_pct, end_os, trades_os, bar_kind, bar_size, signal_type, alpha, beta, sortino_os, test_balanced_accuracy FROM metrics")
     # Fetch data from database
     data = fetch_data_db(query)
     # Adding navigation urls
     data['url'] = f'model/' + data['id'].astype('string') + '/metrics'
     col_names = ['id', 'Model', 'Type', 'Annual return[%]', 'Sharpe', 'Calmar', 'Max DD[%]', 'Date', 'Num trades']
-    hidden_cols = ['url', 'id', 'n_neurons', 'num_train_params', 'horizon', 'alpha', 'beta', 'period']
+    hidden_cols = ['url', 'id', 'bar_kind', 'bar_size', 'signal_type', 'alpha', 'beta', 'sortino_os',
+                   'test_balanced_accuracy']
     # Create a Dash DataTable
     table = dash_table.DataTable(
         id='table',
@@ -27,14 +31,36 @@ def layout_model_selection():
         page_size=20
     )
 
-    df = data[[
-        'n_neurons', 'num_train_params', 'horizon', 'alpha', 'beta', 'period',
-    ]]
+    categorical_cols = ['bar_kind', 'bar_size', 'signal_type', 'model_type', 'alpha', 'beta']
+    numerical_cols = ['sharpe_os', 'calmar_os', 'sortino_os', 'test_balanced_accuracy', 'max_dd_os_pct', 'trades_os']
+    columns = categorical_cols + numerical_cols
+    df = data[columns]
+    df = df.dropna()
 
-    n_samples = df.shape[0]
+    # Pre procesado de los datos para clustering
+    numerical_transformer = Pipeline(steps=[
+        ('scaler', StandardScaler())  # Standardize numerical features
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot encoding categorical
+    ])
+
+    # Combine transformers into a preprocessor with ColumnTransformer
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)
+        ]
+    )
+
+    # Apply transformations to the data
+    df_prepared = preprocessor.fit_transform(df)
+
+    n_samples = df_prepared.shape[0]
     perplexity_value = min(30, n_samples - 1)
     tsne = TSNE(n_components=2, perplexity=perplexity_value, random_state=0)
-    X_2d = tsne.fit_transform(df)
+    X_2d = tsne.fit_transform(df_prepared)
     # Convert the t-SNE results into a DataFrame
     tsne_df = pd.DataFrame(X_2d, columns=['TSNE1', 'TSNE2'])
 

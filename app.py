@@ -1,6 +1,6 @@
 import os
 import re
-from dash import Dash, dcc, html
+from dash import Dash, dcc, html, no_update
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 from views import layout_model_selection, layout_model_metrics
@@ -30,9 +30,10 @@ app.clientside_callback(
     """
     function(active_cell, data) {
         if(active_cell) {
-            var row = data[active_cell.row];
+            var row = data[active_cell.row_id];
             // Assuming you have a column that contains the URL or identifier
             var url = '/' + row.url;
+            console.log(row);
             window.location.href = url;
         }
     }
