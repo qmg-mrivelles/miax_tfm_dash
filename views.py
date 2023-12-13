@@ -1,12 +1,181 @@
 from lib import fetch_data_db, read_equity_curve
 from dash import dash_table, dcc, html
-from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
+import plotly.figure_factory as ff
+import numpy as np
+from scipy.cluster.hierarchy import linkage, ward, fcluster
+
+
+def prepare_cluster_data(data):
+    # SELECCION VARIABLES para aplicar CLUSTERING
+    categorical_cols = ['bar_kind', 'bar_size', 'signal_type', 'model_type', 'alpha', 'beta']
+    numerical_cols = ['sharpe_os', 'calmar_os', 'sortino_os', 'test_balanced_accuracy', 'max_dd_os_pct', 'trades_os']
+
+    # dataframe
+    columns = categorical_cols + numerical_cols
+    df = data[columns]  # Capado a 1000 porque mas no tiene sentido
+    df = df.dropna()  # en los algoritmos muy malos, el backtest rellena de nan en las metricas, me los puedo quitar
+
+    # Pre procesado de los datos para clustering
+    numerical_transformer = Pipeline(steps=[
+        ('scaler', StandardScaler())  # Standardize numerical features
+    ])
+
+    categorical_transformer = Pipeline(steps=[
+        ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot encoding categorical
+    ])
+
+    # Combine transformers into a preprocessor with ColumnTransformer
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ('num', numerical_transformer, numerical_cols),
+            ('cat', categorical_transformer, categorical_cols)
+        ]
+    )
+
+    # Apply transformations to the data
+    df_prepared = preprocessor.fit_transform(df)
+    # Get feature names for categorical variables after one-hot encoding
+    cat_features = preprocessor.named_transformers_['cat']['onehot'].get_feature_names_out(
+        input_features=categorical_cols)
+
+    # Combine with numerical column names
+    all_features = numerical_cols + cat_features.tolist()
+
+    # Convert the array to a DataFrame
+    df_prepared = pd.DataFrame(df_prepared, columns=all_features)
+
+    return df_prepared
+
+
+def create_dendogram(df_prepared):
+    # Create the dendrogram
+    labels = ['' for _ in range(df_prepared.shape[0])]
+    fig = ff.create_dendrogram(df_prepared, linkagefun=lambda x: linkage(x, "ward"), labels=labels)
+    fig.update_layout(
+        autosize=True,
+        margin=dict(l=50, r=50, b=100, t=100, pad=4),
+        xaxis_title="",
+        yaxis_title="Distance",
+        title="Hierarchical Clustering Dendrogram",
+        legend_title=None
+    )
+    return fig
+
+
+def create_graphical_analisis(data, nivel=20):
+    df_prepared = prepare_cluster_data(data)
+
+    Z = linkage(df_prepared, method='ward')
+    clusters = fcluster(Z, t=nivel, criterion='distance')  # "corto" en clusters
+    # Cantidad de muestras por cluester
+    df_prepared['cluster'] = clusters
+
+    # Muestras
+    fig_muestras = px.bar(df_prepared.groupby('cluster').size())
+    fig_muestras.update_layout(
+        xaxis_title="Cluster size",
+        yaxis_title="Muestras",
+        title="Cantidad de muestras por cluster",
+        legend_title=None,
+        plot_bgcolor="white",
+        height=300
+    )
+
+    df_report = df_prepared.copy()
+    numerical_cols = ['sharpe_os', 'calmar_os', 'sortino_os', 'test_balanced_accuracy', 'max_dd_os_pct', 'trades_os']
+
+    df_report[numerical_cols] = data[numerical_cols]
+
+    # Sharpe
+    fig_sharpe = px.box(df_report, x='cluster', y='sharpe_os', color='cluster')
+    fig_sharpe.update_layout(
+        xaxis_title="",
+        yaxis_title="Sharpe Ratio",
+        title="Sharpe Ratio by Cluster",
+        legend_title=None
+    )
+
+    # Test Balanced Accuracy
+    fig_balanced = px.box(df_report, x='cluster', y='test_balanced_accuracy', color='cluster')
+    fig_balanced.update_layout(
+        xaxis_title="",
+        yaxis_title="Test Balanced Accuracy",
+        title="Test Balanced Accuracy by Cluster",
+        legend_title=None
+    )
+
+    # Test Balanced Accuracy
+    fig_calmar = px.box(df_report, x='cluster', y='calmar_os', color='cluster')
+    fig_calmar.update_layout(
+        xaxis_title="",
+        yaxis_title="Calmar Ratio",
+        title="Calmar Ratio by Cluster",
+        legend_title=None
+    )
+
+    # Calmar Ratio
+    fig_calmar = px.box(df_report, x='cluster', y='calmar_os', color='cluster')
+    fig_calmar.update_layout(
+        xaxis_title="",
+        yaxis_title="Calmar Ratio",
+        title="Calmar Ratio by Cluster",
+        legend_title=None
+    )
+
+    # Max. Drawdown [%]
+    fig_max_dd = px.box(df_report, x='cluster', y='max_dd_os_pct', color='cluster')
+    fig_max_dd.update_layout(
+        xaxis_title="",
+        yaxis_title="Max. Drawdown [%]",
+        title="Max Drawdown by Cluster",
+        legend_title=None
+    )
+
+    # Sortino Ratio
+    fig_sortino = px.box(df_report, x='cluster', y='sortino_os', color='cluster')
+    fig_sortino.update_layout(
+        xaxis_title="",
+        yaxis_title="Sortino Ratio",
+        title="Sortino Ratio by Cluster",
+        legend_title=None
+    )
+
+    # Trades_OS
+    fig_trades = px.box(df_report, x='cluster', y='trades_os', color='cluster')
+    fig_trades.update_layout(
+        xaxis_title="",
+        yaxis_title="Trades",
+        title="Trades by Cluster",
+        legend_title=None
+    )
+
+    return html.Div([
+        dbc.Row(
+            [
+                dbc.Col(html.Div([dcc.Graph(figure=fig_muestras)])),
+            ]),
+        dbc.Row(
+            [
+                dbc.Col(html.Div([dcc.Graph(figure=fig_sharpe)])),
+                dbc.Col(html.Div([dcc.Graph(figure=fig_balanced)]))
+            ]),
+        dbc.Row(
+            [
+                dbc.Col(html.Div([dcc.Graph(figure=fig_calmar)])),
+                dbc.Col(html.Div([dcc.Graph(figure=fig_max_dd)]))
+            ]),
+        dbc.Row(
+            [
+                dbc.Col(html.Div([dcc.Graph(figure=fig_sortino)])),
+                dbc.Col(html.Div([dcc.Graph(figure=fig_trades)]))
+            ])
+    ])
 
 
 def layout_model_selection():
@@ -30,57 +199,64 @@ def layout_model_selection():
         cell_selectable=True,
         page_size=20
     )
-
-    categorical_cols = ['bar_kind', 'bar_size', 'signal_type', 'model_type', 'alpha', 'beta']
-    numerical_cols = ['sharpe_os', 'calmar_os', 'sortino_os', 'test_balanced_accuracy', 'max_dd_os_pct', 'trades_os']
-    columns = categorical_cols + numerical_cols
-    df = data[columns]
-    df = df.dropna()
-
-    # Pre procesado de los datos para clustering
-    numerical_transformer = Pipeline(steps=[
-        ('scaler', StandardScaler())  # Standardize numerical features
-    ])
-
-    categorical_transformer = Pipeline(steps=[
-        ('onehot', OneHotEncoder(handle_unknown='ignore'))  # One-hot encoding categorical
-    ])
-
-    # Combine transformers into a preprocessor with ColumnTransformer
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numerical_transformer, numerical_cols),
-            ('cat', categorical_transformer, categorical_cols)
-        ]
-    )
-
-    # Apply transformations to the data
-    df_prepared = preprocessor.fit_transform(df)
-
-    n_samples = df_prepared.shape[0]
-    perplexity_value = min(30, n_samples - 1)
-    tsne = TSNE(n_components=2, perplexity=perplexity_value, random_state=0)
-    X_2d = tsne.fit_transform(df_prepared)
-    # Convert the t-SNE results into a DataFrame
-    tsne_df = pd.DataFrame(X_2d, columns=['TSNE1', 'TSNE2'])
-
-    # If you have labels for each model, add them to the DataFrame
-    tsne_df['label'] = data['model_id']  # Uncomment and set labels if available
-
-    # Create the Plotly figure
-    fig = px.scatter(tsne_df, x='TSNE1', y='TSNE2',
-                     color='label',  # Remove or modify if labels not available
-                     title='t-SNE visualization of Models')
-
-    # Hide the legend
-    fig.update_layout(showlegend=False)
+    df_prepared = prepare_cluster_data(data)
+    fig_dendogram = create_dendogram(df_prepared.iloc[:1000])
+    analisis_html = create_graphical_analisis(data)
 
     return html.Div([
         html.H1("Modelos"),
         table,
         html.Div(id='hidden-div', style={'display': 'none'}),
-        dcc.Graph(figure=fig)
+        dcc.Graph(figure=fig_dendogram, style={'height': '600px', 'width': '100%'}),
+        html.Div([dbc.Row(
+            [
+                dbc.Col(html.Div([
+                    html.H3("Analisis grafico del clustering")
+                ])),
+                dbc.Col(html.Div([
+                    html.Label("Distance"),
+                    dcc.Dropdown(
+                        id='size-dropdown',
+                        options=[{'label': i, 'value': i} for i in np.arange(1, 51, 1)],
+                        value=20  # Default value
+                    ),
+                ])),
+            ])
+        ]),
+        html.Div(id='analisis', children=analisis_html),
+        dcc.Store(id='df_data', data=data.to_json(date_format='iso', orient='split'))
     ])
+
+
+def create_line_figure(df, zoom_state=None):
+    fig = px.line(df['Equity'])
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Equity value",
+        title="Equity Curve",
+        legend_title=None
+    )
+    if zoom_state:
+        fig.update_layout(xaxis_range=[zoom_state['xaxis.range[0]'], zoom_state['xaxis.range[1]']])
+
+    return fig
+
+
+def create_underwater_figure(df, zoom_state=None):
+    fig = px.bar(df['DrawdownPct'] * -1 * 100)
+    fig.update_layout(
+        xaxis_title="",
+        yaxis_title="Drawdown %",
+        title="",
+        legend_title=None,
+        plot_bgcolor="white",
+        height=250
+    )
+
+    if zoom_state:
+        fig.update_layout(xaxis_range=[zoom_state['xaxis.range[0]'], zoom_state['xaxis.range[1]']])
+
+    return fig
 
 
 def layout_model_metrics(id):
@@ -135,13 +311,11 @@ def layout_model_metrics(id):
     df_ec = read_equity_curve(metrics['model_id'])
     df_ec['datetime'] = pd.to_datetime(df_ec['datetime'])
     df_ec = df_ec.set_index('datetime')
-    fig_ec = px.line(df_ec['Equity'])
-    fig_ec.update_layout(
-        xaxis_title="",
-        yaxis_title="",
-        title="Equity Curve",
-        legend_title=None
-    )
+
+    fig_ec = create_line_figure(df_ec)
+
+    # Drawdown Bars
+    fig_dd = create_underwater_figure(df_ec)
 
     tab2_content = dbc.Card(
         dbc.CardBody([
@@ -203,7 +377,10 @@ def layout_model_metrics(id):
                     ]),
             ]),
             html.Br(),
-            dcc.Graph(figure=fig_ec)
+            dcc.Graph(figure=fig_ec, id='line-chart'),
+            dcc.Graph(figure=fig_dd, id='underwater-chart'),
+            dcc.Store(id='zoom-state'),
+            dcc.Store(id='df_ec', data=df_ec.to_json(date_format='iso', orient='split'))
         ]),
         className="mt-3",
     )

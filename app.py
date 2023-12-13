@@ -1,10 +1,13 @@
 import os
 import re
-from dash import Dash, dcc, html, no_update
+import pandas as pd
+from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
-from views import layout_model_selection, layout_model_metrics
+from views import layout_model_selection, layout_model_metrics, create_line_figure, create_underwater_figure, \
+    create_graphical_analisis
 from lib import get_model_id
+from io import StringIO
 from dotenv import load_dotenv
 
 load_dotenv()  # This loads the variables from .env
@@ -42,6 +45,56 @@ app.clientside_callback(
     [Input('table', 'active_cell')],
     [State('table', 'data')]
 )
+
+
+@app.callback(
+    Output('zoom-state', 'data'),
+    [Input('line-chart', 'relayoutData')],
+    [State('zoom-state', 'data')],
+    prevent_initial_call=True
+)
+def update_zoom_state(relayoutData, current_zoom_state):
+    if relayoutData and 'xaxis.range[0]' in relayoutData:
+        return {
+            'xaxis.range[0]': relayoutData['xaxis.range[0]'],
+            'xaxis.range[1]': relayoutData['xaxis.range[1]']
+        }
+    return current_zoom_state
+
+
+@app.callback(
+    Output('line-chart', 'figure'),
+    [Input('zoom-state', 'data'),
+     Input('df_ec', 'data')],
+    prevent_initial_call=True
+)
+def update_line_chart(zoom_state, json_data):
+    str_io = StringIO(json_data)
+    df = pd.read_json(str_io, orient='split')
+    return create_line_figure(df, zoom_state)
+
+
+@app.callback(
+    Output('underwater-chart', 'figure'),
+    [Input('zoom-state', 'data'),
+     Input('df_ec', 'data')],
+    prevent_initial_call=True
+)
+def update_underwater_chart(zoom_state, json_data):
+    str_io = StringIO(json_data)
+    df = pd.read_json(str_io, orient='split')
+    return create_underwater_figure(df, zoom_state)
+
+
+@app.callback(
+    Output('analisis', 'children'),
+    [Input('size-dropdown', 'value'),
+     Input('df_data', 'data')]
+)
+def update_analisis_graph(size, json_data):
+    str_io = StringIO(json_data)
+    df = pd.read_json(str_io, orient='split')
+    return create_graphical_analisis(df, size)
 
 
 @app.callback(Output('page-content', 'children'),
