@@ -18,7 +18,7 @@ def prepare_cluster_data(data):
 
     # dataframe
     columns = categorical_cols + numerical_cols
-    df = data[columns]  # Capado a 1000 porque mas no tiene sentido
+    df = data[columns]
     df = df.dropna()  # en los algoritmos muy malos, el backtest rellena de nan en las metricas, me los puedo quitar
 
     # Pre procesado de los datos para clustering
@@ -69,7 +69,11 @@ def create_dendogram(df_prepared):
 
 
 def create_graphical_analisis(data, nivel=20):
+    numerical_cols = ['sharpe_os', 'calmar_os', 'sortino_os', 'test_balanced_accuracy', 'max_dd_os_pct', 'trades_os']
+
     df_prepared = prepare_cluster_data(data)
+    df_numerical = data[numerical_cols]
+    df_numerical = df_numerical.dropna()
 
     Z = linkage(df_prepared, method='ward')
     clusters = fcluster(Z, t=nivel, criterion='distance')  # "corto" en clusters
@@ -88,9 +92,8 @@ def create_graphical_analisis(data, nivel=20):
     )
 
     df_report = df_prepared.copy()
-    numerical_cols = ['sharpe_os', 'calmar_os', 'sortino_os', 'test_balanced_accuracy', 'max_dd_os_pct', 'trades_os']
-
-    df_report[numerical_cols] = data[numerical_cols]
+    df_report.index = df_numerical.index
+    df_report[numerical_cols] = df_numerical
 
     # Sharpe
     fig_sharpe = px.box(df_report, x='cluster', y='sharpe_os', color='cluster')
